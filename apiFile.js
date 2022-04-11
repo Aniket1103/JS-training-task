@@ -2,127 +2,290 @@ const https = require('https');
 const fs = require('fs');
 
 //
-function printData(url){
+function printData(url) {
     https.get(url, (response) => {
         let data = '';
         response.on('data', (d) => {
             data += (d.toString());
         })
-        response.on('end', ()=>{
+        response.on('end', () => {
             data = JSON.parse(data.toString())[0].lines;
-            
-            function itrFn(data){
+
+            function itrFn(data) {
                 let i = 0;
-                return function print(){
+                return function print() {
                     console.log(data[i]);
                     i++;
                     i %= data.length;
                 }
             }
-            
+
             let inter = setInterval(itrFn(data), 3000);
-            
-            setTimeout(()=>{
+
+            setTimeout(() => {
                 clearInterval(inter);
             }, 15 * 60000);
         })
     })
 }
 
-//searches the first occurence of the spells by it's name and logs it onto the console.
-async function search(url, searchName){
+//Gets the data from the api and stores it in the file
+function getData(url) {
     https.get(url, (response => {
         let data = '';
         response.on('data', (d) => {
             data += (d.toString());
         })
 
-        response.on('end', ()=>{
+        response.on('end', () => {
             //console.log(JSON.parse(data.toString()));
-            data = JSON.parse(data.toString());
+            let stringData = data.toString();
+
+
+            fs.writeFile(`./dataFile.txt`, stringData, function (err) {
+                if (err) throw err;
+            });
+
+        })
+    }))
+}
+
+//searches the first occurence of the spells by it's name and logs it onto the console.
+async function search(url, searchName) {
+    return new Promise(resolve => {
+        // https.get(url, (response => {
+        //     let data = '';
+        //     response.on('data', (d) => {
+        //         data += (d.toString());
+        //     })
+
+        //     response.on('end', ()=>{
+        //         //console.log(JSON.parse(data.toString()));
+        //         data = JSON.parse(data.toString());
+        //         let flag = true;
+        //         for(x of data){
+        //             if(x.name === searchName){
+        //                 console.log(x);
+        //                 flag = false;
+        //                 break;
+        //             }
+        //         }
+        //         if(flag) console.log(`Couldn't find the searched spell, try with some other spell!`);
+
+        //         fs.appendFile(`./history.txt`, 'Search: ' + searchName +'\n', function (err) {
+        //             if (err) throw err;
+        //             resolve();
+        //         });
+
+        //     })
+        // }))
+        fs.readFile('dataFile.txt', 'utf8', (err, data) => {
+            // if (err) {
+            //     console.error(err)
+            //     return
+            // }
+
+            data = JSON.parse(data);
             let flag = true;
-            for(x of data){
-                if(x.name === searchName){
+            for (x of data) {
+                if (x.name === searchName) {
                     console.log(x);
                     flag = false;
                     break;
                 }
             }
-            if(flag) console.log(`Couldn't find the searched spell, try with some other spell!`);
-
-            fs.appendFile(`./history.txt`, 'Search: ' + searchName +'\n', function (err) {
+            if (flag) console.log(`Couldn't find the searched spell, try with some other spell!`);
+            fs.appendFile(`./history.txt`, 'Search: ' + searchName + '\n', function (err) {
                 if (err) throw err;
+                resolve();
             });
-            
         })
-    }))
+    })
+
 }
 
+function filterDataFile(filePath, filteredData) {
+    return new Promise(resolve => {
+        fs.writeFile(filePath, JSON.stringify(filteredData), function (err) {
+            if (err) throw err;
+            //console.log('Data Updated!');
+            resolve();
+        });
+    })
+}
+
+function counterUpdate(id) {
+    return new Promise(resolve => {
+        fs.writeFile('./filteredData/counter.txt', (id + 1).toString(), function (err) {
+            if (err) throw err;
+            //console.log('Counter Updated!');
+            resolve();
+        })
+    })
+}
 
 //filter data on the basis of key and value provided by the user
-const getData = function(url, key, val){
-   
-    https.get(url, (response) => {
-        //https.responseType = 'json';
-        let data = '';
-        response.on('data', (d) => {
-            data += (d.toString());
-        })
-        response.on('end', ()=>{
-            let stringData = data.toString();
-            data = JSON.parse(stringData);
+const filter = async function (url, key, val) {
+    return new Promise(resolve => {
+        // https.get(url, async (response) => {
+        //     //https.responseType = 'json';
+        //     let data = '';
+        //     response.on('data', (d) => {
+        //         data += (d.toString());
+        //     })
+        //     response.on('end', async ()=>{
+        //         let stringData = data.toString();
+        //         data = JSON.parse(stringData);
+        //         let filteredData = data.filter(item => {
+        //             for(x in item){
+        //                 if(x === key && item[x] === val){
+        //                     return true;
+        //                 }
+        //             }
+        //             return false;
+        //         });
+
+        //         let flag = false;
+        //         if(filteredData.length > 0) {
+        //             console.table(filteredData);
+        //             flag = true;
+        //         }
+        //         else console.log('No spells found with the key and value provided, try with some other key/value.');
+        //         resolve();
+        //         if(flag){
+        //             fs.readFile('./filteredData/counter.txt', 'utf8' , async (err, id) => {
+        //                 if (err) {
+        //                 console.error(err)
+        //                 return
+        //                 }
+        //                 //unique id to store the filtered data in an unique file everytime the filter operation is performed
+        //                 id = Number(id);
+        //                 let filePath = `./filteredData/file${id}_${key}_${val}.txt`;
+        //                 //await updateFilterFiles(id, filePath, filteredData);
+
+        //                 //new file is created to store the filtered data
+        //                 await filterDataFile(filePath, filteredData);
+
+        //                 //to maintain the history
+        //                 await updateHistory('filter: ' + `${filePath}\n`);
+
+        //                 //update counter
+        //                 await counterUpdate(id);
+
+        //                 resolve();
+        //             })
+        //         }
+        //         else {
+        //             await updateHistory('filter: ' + 'No Data filtered.');
+        //             resolve();
+        //         }
+
+        //     })
+        // })
+        fs.readFile('dataFile.txt', 'utf8', async (err, data) => {
+            if (err) {
+                console.error(err)
+                return
+            }
+
+
+            data = JSON.parse(data);
             let filteredData = data.filter(item => {
-                for(x in item){
-                    if(x === key && item[x] === val){
+                for (x in item) {
+                    if (x === key && item[x] === val) {
                         return true;
                     }
                 }
                 return false;
             });
 
+            let flag = false;
+            if (filteredData.length > 0) {
+                console.table(filteredData);
+                flag = true;
+            }
+            else console.log('No spells found with the key and value provided, try with some other key/value.');
+            resolve();
+            if (flag) {
+                fs.readFile('./filteredData/counter.txt', 'utf8', async (err, id) => {
+                    if (err) {
+                        console.error(err)
+                        return
+                    }
+                    //unique id to store the filtered data in an unique file everytime the filter operation is performed
+                    id = Number(id);
+                    let filePath = `./filteredData/file${id}_${key}_${val}.txt`;
+                    //await updateFilterFiles(id, filePath, filteredData);
 
-            fs.readFile('./filteredData/counter.txt', 'utf8' , (err, id) => {
-                if (err) {
-                  console.error(err)
-                  return
-                }
-                //unique id to store the filtered data in an unique file everytime the filter operation is performed
-                id = Number(id);
-                let filePath = `./filteredData/file${id}_${key}_${val}.txt`;
+                    //new file is created to store the filtered data
+                    await filterDataFile(filePath, filteredData);
 
-                //new file is created to store the filtered data
-                fs.writeFile(filePath, stringData, function (err) {
-                    if (err) throw err;
-                    console.log('Data Updated!');
-                });
-                //to maintain the history
-                fs.appendFile(`./history.txt`, 'filter: ' + `${filePath}\n`, function (err) {
-                    if (err) throw err;
-                    //console.log('Data Updated!');
-                });
-                
-                fs.writeFile('./filteredData/counter.txt', (id + 1).toString(), function (err) {
-                    if (err) throw err;
-                    console.log('Counter Updated!');
+                    //to maintain the history
+                    await updateHistory('filter: ' + `${filePath}\n`);
+
+                    //update counter
+                    await counterUpdate(id);
+
+                    resolve();
                 })
-            })
-            console.table(filteredData);
-            
-        })
+            }
+            else {
+                await updateHistory('filter: ' + 'No Data filtered.');
+                resolve();
+            }
+        });
     })
+
+    
 };
 
-function showHistory(){
-    fs.readFile('history.txt', 'utf8' , (err, history) => {
-        if (err) {
-            console.error(err)
-            return
-          }
-        console.log(history);
+
+function showHistory() {
+    return new Promise(resolve => {
+        fs.readFile('history.txt', 'utf8', (err, history) => {
+            if (err) {
+                console.error(err)
+                return
+            }
+            console.log(history);
+            resolve();
+        })
+    })
+
+}
+
+//To update history every time any operation is performed.
+function updateHistory(status) {
+    return new Promise(resolve => {
+        fs.appendFile(`./history.txt`, status, function (err) {
+            if (err) throw err;
+            //console.log('Data Updated!');
+            resolve();
+        });
     })
 }
 
-module.exports.printData = printData;
+function deleteSpell(spellName) {
+    return new Promise(resolve => {
+        fs.readFile('./dataFile.txt', 'utf8', (err, data) => {
+            if (err) {
+                console.error(err)
+                return
+            }
+            //console.log(JSON.parse(data));
+            data = JSON.parse(data);
+            data = data.filter((item) => item.name !== spellName);
+            fs.writeFile('./dataFile.txt', JSON.stringify(data), (err) => {
+                if (err) throw err;
+                resolve();
+            })
+        })
+    });
+}
+
 module.exports.getData = getData;
+module.exports.printData = printData;
+module.exports.filter = filter;
 module.exports.search = search;
 module.exports.showHistory = showHistory;
+module.exports.deleteSpell = deleteSpell;
